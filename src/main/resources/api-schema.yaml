@@ -1,0 +1,299 @@
+openapi: "3.0.0"
+info:
+  title: TODO API Document
+  version: "0.0.1"
+  description: TODO APIのドキュメントです
+tags:
+  - name: opts
+    description: "運用監視関連のAPI"
+  - name: tasks
+    description: "タスク関連のAPI"
+paths:
+  /health:
+    get:
+      tags:
+       - opts
+      responses:
+        '200':
+          description: OK
+  /tasks/:
+    get:
+      summary: "タスク一覧の取得"
+      description: "タスクの一覧を取得できます"
+      operationId: "listTasks"
+      tags:
+        - tasks
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          description: "リストに含まれるリソースの最大数"
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          required: true
+          description: "オフセット"
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskListDTO"
+        '400':
+          description: "Bad Request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+
+
+    post:
+      summary: "タスク作成"
+      description: "タスクを新規作成します"
+      operationId: "createTask"
+      tags:
+        - tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskForm"
+
+      responses:
+        '201':
+          description: CREATED
+          headers:
+            location:
+              description: "作成されたリソースのURI"
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDTO"
+
+        '400':
+          description: "Bad Request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+
+
+
+  /tasks/{taskId}:
+    get:
+      summary: タスク取得
+      description: "指定されたタスクを一件取得します"
+      tags:
+        - tasks
+      operationId: showTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: "詳細を取得するタスクID"
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDTO"
+        '404':
+          description: "NOT FOUND"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceNotFoundError"
+    put:
+      summary: "タスク更新"
+      description: "指定されたタスクをリクエストボディの内容で上書きします"
+      operationId: "editTask"
+      tags:
+        - tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: "更新するタスクのID"
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskForm"
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDTO"
+        '400':
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        '404':
+          description: "Not Found"
+          content:
+            application/json:
+               schema:
+                $ref: "#/components/schemas/ResourceNotFoundError"
+    delete:
+      summary: "タスク削除"
+      description: "指定されたタスクを削除します"
+      operationId: "deleteTask"
+      tags:
+        - tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: "削除するタスクのID"
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: "DELETE"
+        '404':
+          description: "Not Found"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceNotFoundError"
+components:
+  schemas:
+    TaskDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: "タスクID"
+        title:
+          type: string
+          description: "タスクの説明タイトル"
+      required:
+        - id
+        - title
+    ResourceNotFoundError:
+      description: "指定したリソースが存在しない"
+      type: object
+      properties:
+        title:
+         type: string
+         description: "エラーのタイトル"
+         default: "Resource Not Found"
+        detail:
+          type: string
+          description: "エラーの詳細"
+      required:
+        - title
+        - detail
+    TaskForm:
+      type: object
+      properties:
+        title:
+          type: string
+          description: "作成されるタスクのタイトル"
+          maxLength: 256
+          minLength: 1
+      required:
+        - title
+
+    BadRequestError:
+      description: "リクエストが不正"
+      type: object
+      properties:
+        title:
+          type: string
+          description: "エラーのタイトル"
+          default: "Bad Request"
+        detail:
+          type: string
+          description:  "エラーの詳細"
+          default: "リクエストが不正です。正しいリクエストでリトライしてください。"
+        invalid-params:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvalidParam"
+      required:
+        - title
+        - detail
+        - invalid-params
+
+
+    InvalidParam:
+      description: "不正なリクエストについての詳細"
+      type: object
+      properties:
+        name:
+          type: string
+          description: "エラーが発生したフィールド名"
+        reason:
+          type: string
+          description: "エラーの理由"
+      required:
+        - name
+        - reason
+    TaskListDTO:
+      description: "タスクの一覧"
+      type: object
+      properties:
+        page:
+          $ref: "#/components/schemas/PageDTO"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskDTO"
+      required:
+        - results
+
+    PageDTO:
+      description: "ページング情報"
+      type: object
+      properties:
+        limit:
+          description: "リクエストされたリミット"
+          type: integer
+          format: int64
+        offset:
+          description: "リクエストされたオフセット"
+          type: integer
+          format: int64
+        size:
+          description: "取得した項目数"
+          type: integer
+          format: int32
+      required:
+        - limit
+        - offset
+        - size
+
+
+
+
